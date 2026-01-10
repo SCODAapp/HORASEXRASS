@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await loadProfile(session.user.id);
         } else {
           setProfile(null);
+          setLoading(false);
         }
       })();
     });
@@ -50,10 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      if (error) throw error;
-      setProfile(data);
+      if (error) {
+        console.error('Error loading profile:', error);
+        setProfile(null);
+      } else {
+        setProfile(data);
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
+      setProfile(null);
     } finally {
       setLoading(false);
     }
