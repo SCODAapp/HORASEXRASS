@@ -41,6 +41,17 @@ npm install
 
 3. La base de datos ya está configurada con las tablas necesarias
 
+## Desplegar en GitHub Pages
+
+Para que el sitio funcione correctamente en GitHub Pages:
+
+1. Ve a **Settings > Secrets and variables > Actions** en tu repositorio
+2. Agrega estos secrets:
+   - `VITE_SUPABASE_URL`: URL de tu proyecto Supabase
+   - `VITE_SUPABASE_ANON_KEY`: Clave anónima de Supabase
+3. Ve a **Settings > Pages** y asegúrate de que esté habilitado GitHub Pages
+4. El workflow se ejecutará automáticamente con cada push a main
+
 ## Desarrollo
 
 ```bash
