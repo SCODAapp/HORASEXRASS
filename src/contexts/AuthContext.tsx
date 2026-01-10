@@ -19,7 +19,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.id);
+      if (!mounted) return;
+
       setUser(session?.user ?? null);
       if (session?.user) {
         loadProfile(session.user.id);
@@ -28,7 +33,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id);
+      if (!mounted) return;
+
       (async () => {
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -40,11 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })();
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const loadProfile = async (userId: string) => {
+  const loadProfile = async (userId: string, retries = 3) => {
     try {
+      console.log('Loading profile for user:', userId, 'retries left:', retries);
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -53,14 +66,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Error loading profile:', error);
+
+        if (retries > 0) {
+          console.log('Retrying profile load...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return loadProfile(userId, retries - 1);
+        }
+
         setProfile(null);
-      } else {
+        setLoading(false);
+      } else if (data) {
+        console.log('Profile loaded successfully:', data);
         setProfile(data);
+        setLoading(false);
+      } else {
+        console.log('No profile found, will retry if attempts left');
+
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return loadProfile(userId, retries - 1);
+        }
+
+        setProfile(null);
+        setLoading(false);
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('Exception loading profile:', error);
       setProfile(null);
-    } finally {
       setLoading(false);
     }
   };
