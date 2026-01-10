@@ -64,9 +64,9 @@ export default function TaskMap({ onSelectTask, refreshTrigger }: TaskMapProps) 
         .from('tasks')
         .select(`
           *,
-          employer:profiles!tasks_employer_id_fkey(*)
+          creator:profiles!tasks_creator_id_fkey(*)
         `)
-        .eq('status', 'pending')
+        .eq('status', 'available')
         .not('latitude', 'is', null)
         .not('longitude', 'is', null)
         .order('created_at', { ascending: false });
@@ -121,11 +121,11 @@ export default function TaskMap({ onSelectTask, refreshTrigger }: TaskMapProps) 
                       {task.scheduled_time && ` - 🕐 ${task.scheduled_time.slice(0, 5)}`}
                     </p>
                   )}
-                  {task.employer && (
+                  {task.creator && (
                     <p className="popup-employer">
-                      👤 {task.employer.full_name}
-                      {task.employer.rating_count > 0 && (
-                        <span> ⭐ {task.employer.rating_average.toFixed(1)}</span>
+                      👤 {task.creator.full_name}
+                      {task.creator.total_ratings > 0 && (
+                        <span> ⭐ {task.creator.rating.toFixed(1)}</span>
                       )}
                     </p>
                   )}

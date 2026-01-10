@@ -43,7 +43,7 @@ function AppContent() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1 className="app-title">Horas Extras</h1>
+        <h1 className="app-title">Hextras</h1>
         <button
           className="profile-button"
           onClick={() => setShowProfile(true)}
@@ -51,8 +51,8 @@ function AppContent() {
         >
           <span className="profile-icon">👤</span>
           <span className="profile-name">{profile?.full_name}</span>
-          {profile && profile.rating_count > 0 && (
-            <span className="header-rating">⭐ {profile.rating_average.toFixed(1)}</span>
+          {profile && profile.total_ratings > 0 && (
+            <span className="header-rating">⭐ {profile.rating.toFixed(1)}</span>
           )}
         </button>
       </header>

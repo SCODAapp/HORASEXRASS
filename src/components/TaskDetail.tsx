@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Task, TaskApplication } from '../lib/supabase';
+import type { Task } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 interface TaskDetailProps {
@@ -10,138 +10,70 @@ interface TaskDetailProps {
 }
 
 export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps) {
-  const [applications, setApplications] = useState<TaskApplication[]>([]);
-  const [hasApplied, setHasApplied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
-  const isOwner = user?.id === task.employer_id;
-  const isAssigned = user?.id === task.assigned_to;
+  const isCreator = user?.id === task.creator_id;
+  const isAssignee = user?.id === task.assigned_to;
 
-  useEffect(() => {
-    if (isOwner) {
-      loadApplications();
-    } else {
-      checkIfApplied();
-    }
-  }, [task.id, user]);
+  const handleTakeTask = async () => {
+    if (!user || !profile) return;
 
-  const loadApplications = async () => {
-    const { data } = await supabase
-      .from('task_applications')
-      .select(`
-        *,
-        worker:profiles!task_applications_worker_id_fkey(*)
-      `)
-      .eq('task_id', task.id)
-      .eq('status', 'pending')
-      .order('applied_at', { ascending: true });
-
-    setApplications(data || []);
-  };
-
-  const checkIfApplied = async () => {
-    const { data } = await supabase
-      .from('task_applications')
-      .select('id')
-      .eq('task_id', task.id)
-      .eq('worker_id', user?.id)
-      .maybeSingle();
-
-    setHasApplied(!!data);
-  };
-
-  const handleApply = async () => {
-    if (!user || hasApplied) return;
+    const confirm = window.confirm('¿Estás seguro de que quieres tomar esta tarea?');
+    if (!confirm) return;
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('task_applications')
-        .insert({
-          task_id: task.id,
-          worker_id: user.id,
-        });
+      const { data: currentTask, error: fetchError } = await supabase
+        .from('tasks')
+        .select('status, assigned_to')
+        .eq('id', task.id)
+        .single();
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
 
-      setHasApplied(true);
-      alert('¡Postulación enviada con éxito!');
-      onUpdate();
-    } catch (error: any) {
-      alert('Error al postular: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAcceptApplication = async (application: TaskApplication) => {
-    setLoading(true);
-    try {
-      const applicantProfile = application.worker;
-      if (!applicantProfile) {
-        alert('Error: No se encontró el perfil del trabajador');
+      if (currentTask.status !== 'available' || currentTask.assigned_to) {
+        alert('Esta tarea ya no está disponible');
+        onUpdate();
+        onClose();
         return;
       }
 
-      const competingApps = applications.filter(app =>
-        app.worker &&
-        app.worker.rating_average === applicantProfile.rating_average &&
-        app.worker.rating_count === applicantProfile.rating_count
-      );
-
-      let selectedWorker = application.worker_id;
-
-      if (competingApps.length > 1) {
-        const sortedApps = competingApps.sort((a, b) => {
-          const aCompleted = a.worker?.completed_tasks || 0;
-          const bCompleted = b.worker?.completed_tasks || 0;
-          return bCompleted - aCompleted;
-        });
-
-        selectedWorker = sortedApps[0].worker_id;
-      }
-
-      const { error: taskError } = await supabase
+      const { error } = await supabase
         .from('tasks')
         .update({
           status: 'assigned',
-          assigned_to: selectedWorker,
+          assigned_to: user.id,
+          assigned_at: new Date().toISOString(),
         })
-        .eq('id', task.id);
+        .eq('id', task.id)
+        .eq('status', 'available')
+        .is('assigned_to', null);
 
-      if (taskError) throw taskError;
-
-      const { error: appError } = await supabase
-        .from('task_applications')
-        .update({ status: 'accepted' })
-        .eq('id', applications.find(a => a.worker_id === selectedWorker)?.id);
-
-      if (appError) throw appError;
-
-      const { error: rejectError } = await supabase
-        .from('task_applications')
-        .update({ status: 'rejected' })
-        .eq('task_id', task.id)
-        .neq('worker_id', selectedWorker);
-
-      if (rejectError) throw rejectError;
-
-      alert('¡Tarea asignada con éxito!');
-      onUpdate();
-      onClose();
+      if (error) {
+        if (error.code === '23505' || error.message.includes('conflict')) {
+          alert('Alguien más tomó esta tarea primero. Inténtalo con otra tarea.');
+        } else {
+          throw error;
+        }
+      } else {
+        alert('¡Tarea asignada exitosamente!');
+        onUpdate();
+        onClose();
+      }
     } catch (error: any) {
-      alert('Error al asignar tarea: ' + error.message);
+      console.error('Error taking task:', error);
+      alert('Error al tomar la tarea: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleCompleteTask = async () => {
-    if (!isOwner || !task.assigned_to) return;
+    if (!isCreator || !task.assigned_to) return;
 
     const confirm = window.confirm('¿Marcar esta tarea como completada?');
     if (!confirm) return;
@@ -152,10 +84,10 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
         .from('tasks')
         .update({
           status: 'completed',
-          updated_at: new Date().toISOString()
+          completed_at: new Date().toISOString(),
         })
         .eq('id', task.id)
-        .eq('employer_id', user?.id);
+        .eq('creator_id', user?.id);
 
       if (error) throw error;
 
@@ -174,12 +106,12 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
     setLoading(true);
     try {
       const { error } = await supabase
-        .from('ratings')
+        .from('task_ratings')
         .insert({
           task_id: task.id,
-          worker_id: task.assigned_to,
-          employer_id: user?.id,
-          stars: rating,
+          rated_user_id: task.assigned_to,
+          rating_user_id: user?.id,
+          rating: rating,
           comment: comment || null,
         });
 
@@ -195,85 +127,75 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
     }
   };
 
-  const handleCancelTask = async () => {
-    const confirm = window.confirm('¿Estás seguro de cancelar esta tarea?');
-    if (!confirm) return;
-
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: 'cancelled' })
-        .eq('id', task.id);
-
-      if (error) throw error;
-
-      alert('Tarea cancelada');
-      onUpdate();
-      onClose();
-    } catch (error: any) {
-      alert('Error al cancelar: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (showRating) {
     return (
       <div className="modal-overlay" onClick={onClose}>
         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
-            <h2>Calificar Trabajador</h2>
-            <button className="close-button" onClick={onClose}>×</button>
+            <h2>Calificar Usuario</h2>
+            <button className="modal-close" onClick={onClose}>×</button>
           </div>
 
-          <div className="rating-form">
-            <div className="form-group">
-              <label>Calificación</label>
-              <div className="star-rating">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    className={star <= rating ? 'star-active' : 'star'}
-                    onClick={() => setRating(star)}
-                  >
-                    ★
-                  </button>
-                ))}
+          <div className="task-detail">
+            <div className="rating-form">
+              <div className="form-group">
+                <label>Calificación</label>
+                <div className="star-rating">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      className={star <= rating ? 'star-active' : 'star'}
+                      onClick={() => setRating(star)}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="form-group">
-              <label htmlFor="comment">Comentario (opcional)</label>
-              <textarea
-                id="comment"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Comparte tu experiencia..."
-                rows={4}
-              />
-            </div>
+              <div className="form-group">
+                <label htmlFor="comment">Comentario (opcional)</label>
+                <textarea
+                  id="comment"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Comparte tu experiencia..."
+                  rows={4}
+                />
+              </div>
 
-            <button
-              onClick={handleSubmitRating}
-              className="btn-primary"
-              disabled={loading}
-            >
-              {loading ? 'Enviando...' : 'Enviar Calificación'}
-            </button>
+              <button
+                onClick={handleSubmitRating}
+                className="btn-primary btn-full"
+                disabled={loading}
+              >
+                {loading ? 'Enviando...' : 'Enviar Calificación'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  const getStatusText = (status: string) => {
+    const statuses: Record<string, string> = {
+      available: 'Disponible',
+      assigned: 'Asignada',
+      in_progress: 'En progreso',
+      completed: 'Completada',
+      rated: 'Calificada',
+    };
+    return statuses[status] || status;
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{task.title}</h2>
-          <button className="close-button" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose}>×</button>
         </div>
 
         <div className="task-detail">
@@ -300,73 +222,47 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
 
           <div className="detail-section">
             <h3>Estado</h3>
-            <p className="status-text">{task.status === 'pending' ? 'Disponible' : task.status === 'assigned' ? 'Asignada' : task.status === 'completed' ? 'Completada' : 'Cancelada'}</p>
+            <p className="status-text">{getStatusText(task.status)}</p>
           </div>
 
-          {task.employer && (
+          {task.creator && (
             <div className="detail-section">
-              <h3>Empleador</h3>
+              <h3>Publicado por</h3>
               <div className="profile-info">
-                <p>{task.employer.full_name}</p>
-                {task.employer.rating_count > 0 && (
-                  <p className="rating">⭐ {task.employer.rating_average.toFixed(1)} ({task.employer.rating_count} reseñas)</p>
+                <p>{task.creator.full_name}</p>
+                {task.creator.total_ratings > 0 && (
+                  <p className="rating">⭐ {task.creator.rating.toFixed(1)} ({task.creator.total_ratings} {task.creator.total_ratings === 1 ? 'calificación' : 'calificaciones'})</p>
                 )}
+                <p className="completed">✓ {task.creator.published_tasks} {task.creator.published_tasks === 1 ? 'tarea publicada' : 'tareas publicadas'}</p>
               </div>
             </div>
           )}
 
-          {task.worker && (
+          {task.assignee && (
             <div className="detail-section">
-              <h3>Trabajador Asignado</h3>
+              <h3>Asignado a</h3>
               <div className="profile-info">
-                <p>{task.worker.full_name}</p>
-                {task.worker.rating_count > 0 && (
-                  <p className="rating">⭐ {task.worker.rating_average.toFixed(1)} ({task.worker.rating_count} reseñas)</p>
+                <p>{task.assignee.full_name}</p>
+                {task.assignee.total_ratings > 0 && (
+                  <p className="rating">⭐ {task.assignee.rating.toFixed(1)} ({task.assignee.total_ratings} {task.assignee.total_ratings === 1 ? 'calificación' : 'calificaciones'})</p>
                 )}
-              </div>
-            </div>
-          )}
-
-          {isOwner && applications.length > 0 && task.status === 'pending' && (
-            <div className="detail-section">
-              <h3>Postulaciones ({applications.length})</h3>
-              <div className="applications-list">
-                {applications.map((app) => (
-                  <div key={app.id} className="application-card">
-                    <div className="application-info">
-                      <p className="worker-name">{app.worker?.full_name}</p>
-                      {app.worker && app.worker.rating_count > 0 && (
-                        <p className="rating">
-                          ⭐ {app.worker.rating_average.toFixed(1)} ({app.worker.rating_count} reseñas)
-                        </p>
-                      )}
-                      <p className="completed">✓ {app.worker?.completed_tasks || 0} tareas completadas</p>
-                    </div>
-                    <button
-                      onClick={() => handleAcceptApplication(app)}
-                      className="btn-primary btn-small"
-                      disabled={loading}
-                    >
-                      Aceptar
-                    </button>
-                  </div>
-                ))}
+                <p className="completed">✓ {task.assignee.completed_tasks} {task.assignee.completed_tasks === 1 ? 'tarea completada' : 'tareas completadas'}</p>
               </div>
             </div>
           )}
 
           <div className="modal-actions">
-            {!isOwner && !isAssigned && task.status === 'pending' && (
+            {!isCreator && !isAssignee && task.status === 'available' && (
               <button
-                onClick={handleApply}
+                onClick={handleTakeTask}
                 className="btn-primary"
-                disabled={loading || hasApplied}
+                disabled={loading}
               >
-                {hasApplied ? 'Ya postulaste' : loading ? 'Postulando...' : 'Postularme'}
+                {loading ? 'Tomando tarea...' : 'Tomar Esta Tarea'}
               </button>
             )}
 
-            {isOwner && task.status === 'assigned' && (
+            {isCreator && task.status === 'assigned' && (
               <button
                 onClick={handleCompleteTask}
                 className="btn-success"
@@ -376,14 +272,10 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
               </button>
             )}
 
-            {isOwner && task.status === 'pending' && (
-              <button
-                onClick={handleCancelTask}
-                className="btn-danger"
-                disabled={loading}
-              >
-                Cancelar Tarea
-              </button>
+            {(task.status === 'completed' || task.status === 'rated') && isCreator && (
+              <div className="success-message">
+                <p>Esta tarea ha sido completada</p>
+              </div>
             )}
           </div>
         </div>

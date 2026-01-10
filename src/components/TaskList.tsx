@@ -11,7 +11,7 @@ interface TaskListProps {
 export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'my-tasks' | 'my-applications'>('all');
+  const [filter, setFilter] = useState<'all' | 'published' | 'assigned'>('all');
   const { user } = useAuth();
 
   useEffect(() => {
@@ -35,29 +35,17 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
         .from('tasks')
         .select(`
           *,
-          employer:profiles!tasks_employer_id_fkey(*),
-          worker:profiles!tasks_assigned_to_fkey(*)
+          creator:profiles!tasks_creator_id_fkey(*),
+          assignee:profiles!tasks_assigned_to_fkey(*)
         `)
         .order('created_at', { ascending: false });
 
-      if (filter === 'my-tasks') {
-        query = query.eq('employer_id', user?.id);
-      } else if (filter === 'my-applications') {
-        const { data: applications } = await supabase
-          .from('task_applications')
-          .select('task_id')
-          .eq('worker_id', user?.id);
-
-        const taskIds = applications?.map(app => app.task_id) || [];
-        if (taskIds.length > 0) {
-          query = query.in('id', taskIds);
-        } else {
-          setTasks([]);
-          setLoading(false);
-          return;
-        }
+      if (filter === 'published') {
+        query = query.eq('creator_id', user?.id);
+      } else if (filter === 'assigned') {
+        query = query.eq('assigned_to', user?.id);
       } else {
-        query = query.eq('status', 'pending');
+        query = query.eq('status', 'available');
       }
 
       const { data, error } = await query;
@@ -73,12 +61,13 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      pending: { text: 'Disponible', class: 'badge-pending' },
+      available: { text: 'Disponible', class: 'badge-available' },
       assigned: { text: 'Asignada', class: 'badge-assigned' },
+      in_progress: { text: 'En progreso', class: 'badge-in_progress' },
       completed: { text: 'Completada', class: 'badge-completed' },
-      cancelled: { text: 'Cancelada', class: 'badge-cancelled' },
+      rated: { text: 'Calificada', class: 'badge-rated' },
     };
-    return badges[status as keyof typeof badges] || badges.pending;
+    return badges[status as keyof typeof badges] || badges.available;
   };
 
   if (loading) {
@@ -99,19 +88,19 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
           className={filter === 'all' ? 'tab-active' : 'tab'}
           onClick={() => setFilter('all')}
         >
-          Todas
+          Disponibles
         </button>
         <button
-          className={filter === 'my-tasks' ? 'tab-active' : 'tab'}
-          onClick={() => setFilter('my-tasks')}
+          className={filter === 'published' ? 'tab-active' : 'tab'}
+          onClick={() => setFilter('published')}
         >
-          Mis Tareas
+          Mis Publicadas
         </button>
         <button
-          className={filter === 'my-applications' ? 'tab-active' : 'tab'}
-          onClick={() => setFilter('my-applications')}
+          className={filter === 'assigned' ? 'tab-active' : 'tab'}
+          onClick={() => setFilter('assigned')}
         >
-          Postulaciones
+          Mis Asignadas
         </button>
       </div>
 
@@ -142,12 +131,12 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
                     {task.scheduled_time && ` 🕐 ${task.scheduled_time.slice(0, 5)}`}
                   </span>
                 )}
-                {task.employer && (
+                {task.creator && (
                   <span className="employer">
-                    👤 {task.employer.full_name}
-                    {task.employer.rating_count > 0 && (
+                    👤 {task.creator.full_name}
+                    {task.creator.total_ratings > 0 && (
                       <span className="rating">
-                        ⭐ {task.employer.rating_average.toFixed(1)}
+                        ⭐ {task.creator.rating.toFixed(1)}
                       </span>
                     )}
                   </span>

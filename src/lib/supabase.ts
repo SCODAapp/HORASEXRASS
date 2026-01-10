@@ -13,16 +13,17 @@ export type Profile = {
   id: string;
   full_name: string;
   phone: string | null;
-  rating_average: number;
-  rating_count: number;
+  rating: number;
+  total_ratings: number;
   completed_tasks: number;
+  published_tasks: number;
   created_at: string;
   updated_at: string;
 };
 
 export type Task = {
   id: string;
-  employer_id: string;
+  creator_id: string;
   title: string;
   description: string;
   location: string;
@@ -31,29 +32,23 @@ export type Task = {
   longitude: number | null;
   scheduled_date: string | null;
   scheduled_time: string | null;
-  status: 'pending' | 'assigned' | 'completed' | 'cancelled';
+  status: 'available' | 'assigned' | 'in_progress' | 'completed' | 'rated';
   assigned_to: string | null;
+  assigned_at: string | null;
+  completed_at: string | null;
+  is_rated: boolean;
   created_at: string;
   updated_at: string;
-  employer?: Profile;
-  worker?: Profile;
+  creator?: Profile;
+  assignee?: Profile;
 };
 
-export type TaskApplication = {
+export type TaskRating = {
   id: string;
   task_id: string;
-  worker_id: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  applied_at: string;
-  worker?: Profile;
-};
-
-export type Rating = {
-  id: string;
-  task_id: string;
-  worker_id: string;
-  employer_id: string;
-  stars: number;
+  rated_user_id: string;
+  rating_user_id: string;
+  rating: number;
   comment: string | null;
   created_at: string;
 };

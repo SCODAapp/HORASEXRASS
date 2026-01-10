@@ -50,7 +50,7 @@ export default function CreateTask({ onClose, onSuccess }: CreateTaskProps) {
       const { error } = await supabase
         .from('tasks')
         .insert({
-          employer_id: user?.id,
+          creator_id: user?.id,
           title,
           description,
           location,
@@ -59,7 +59,7 @@ export default function CreateTask({ onClose, onSuccess }: CreateTaskProps) {
           longitude,
           scheduled_date: scheduledDate || null,
           scheduled_time: scheduledTime || null,
-          status: 'pending',
+          status: 'available',
         });
 
       if (error) throw error;
