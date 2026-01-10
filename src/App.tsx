@@ -1,36 +1,124 @@
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import ProtectedRoute from './components/ProtectedRoute';
-import ConfigWarning from './components/ConfigWarning';
+import { useState } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Login from './components/Login';
+import Register from './components/Register';
+import TaskList from './components/TaskList';
+import TaskMap from './components/TaskMap';
+import TaskDetail from './components/TaskDetail';
+import CreateTask from './components/CreateTask';
+import Profile from './components/Profile';
+import type { Task } from './lib/supabase';
+import './App.css';
 
-function App() {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+function AppContent() {
+  const { user, profile, loading } = useAuth();
+  const [showLogin, setShowLogin] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  if (!supabaseUrl || !supabaseKey) {
-    return <ConfigWarning />;
+  const handleRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Cargando...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return showLogin ? (
+      <Login onToggleView={() => setShowLogin(false)} />
+    ) : (
+      <Register onToggleView={() => setShowLogin(true)} />
+    );
   }
 
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
+    <div className="app">
+      <header className="app-header">
+        <h1 className="app-title">Horas Extras</h1>
+        <button
+          className="profile-button"
+          onClick={() => setShowProfile(true)}
+          title="Mi perfil"
+        >
+          <span className="profile-icon">👤</span>
+          <span className="profile-name">{profile?.full_name}</span>
+          {profile && profile.rating_count > 0 && (
+            <span className="header-rating">⭐ {profile.rating_average.toFixed(1)}</span>
+          )}
+        </button>
+      </header>
+
+      <div className="view-toggle">
+        <button
+          className={viewMode === 'list' ? 'toggle-btn active' : 'toggle-btn'}
+          onClick={() => setViewMode('list')}
+        >
+          📋 Lista
+        </button>
+        <button
+          className={viewMode === 'map' ? 'toggle-btn active' : 'toggle-btn'}
+          onClick={() => setViewMode('map')}
+        >
+          🗺️ Mapa
+        </button>
+        <button
+          className="toggle-btn btn-create-main"
+          onClick={() => setShowCreateTask(true)}
+        >
+          + Nueva Tarea
+        </button>
+      </div>
+
+      <main className="app-main">
+        {viewMode === 'list' ? (
+          <TaskList
+            key={refreshTrigger}
+            onSelectTask={setSelectedTask}
+            onCreateTask={() => setShowCreateTask(true)}
           />
-        </Routes>
-      </Router>
+        ) : (
+          <TaskMap
+            onSelectTask={setSelectedTask}
+            refreshTrigger={refreshTrigger}
+          />
+        )}
+      </main>
+
+      {selectedTask && (
+        <TaskDetail
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onUpdate={handleRefresh}
+        />
+      )}
+
+      {showCreateTask && (
+        <CreateTask
+          onClose={() => setShowCreateTask(false)}
+          onSuccess={handleRefresh}
+        />
+      )}
+
+      {showProfile && (
+        <Profile onClose={() => setShowProfile(false)} />
+      )}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
