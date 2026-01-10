@@ -43,7 +43,10 @@ function AppContent() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1 className="app-title">Hextras</h1>
+        <div className="app-title-container">
+          <img src="/HEXTRAS/logoextrass.png" alt="Hextras" className="app-logo" />
+          <h1 className="app-title">Hextras</h1>
+        </div>
         <button
           className="profile-button"
           onClick={() => setShowProfile(true)}

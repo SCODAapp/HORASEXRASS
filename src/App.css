@@ -52,6 +52,17 @@ body {
   z-index: 100;
 }
 
+.app-title-container {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+}
+
+.app-logo {
+  height: 40px;
+  width: auto;
+}
+
 .app-title {
   font-size: 1.5rem;
   font-weight: 700;
