@@ -147,6 +147,8 @@ body {
 .auth-logo {
   display: block;
   margin: 0 auto calc(var(--spacing) * 1);
+  pointer-events: none;
+  user-select: none;
 }
 
 .auth-subtitle {
