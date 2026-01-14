@@ -44,7 +44,7 @@ function AppContent() {
     <div className="app">
       <header className="app-header">
         <div className="app-title-container">
-          <img src="/logoextrass.png" alt="Hextras" className="app-logo" />
+          <img src={`${import.meta.env.BASE_URL}logoextrass.png`} alt="Hextras" className="app-logo" />
           <h1 className="app-title">Hextras</h1>
         </div>
         <button
