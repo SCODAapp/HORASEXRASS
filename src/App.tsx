@@ -44,7 +44,10 @@ function AppContent() {
     <div className="app">
       <header className="app-header">
         <div className="app-title-container">
-          <img src={`${import.meta.env.BASE_URL}logoextrass.png`} alt="Hextras" className="app-logo" />
+          <svg className="app-logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 2L35 12V28L20 38L5 28V12L20 2Z" stroke="currentColor" strokeWidth="2.5" fill="none"/>
+            <path d="M20 12L28 17V27L20 32L12 27V17L20 12Z" fill="currentColor"/>
+          </svg>
           <h1 className="app-title">Hextras</h1>
         </div>
         <button
