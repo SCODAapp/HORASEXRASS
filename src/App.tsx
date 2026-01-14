@@ -44,9 +44,13 @@ function AppContent() {
     <div className="app">
       <header className="app-header">
         <div className="app-title-container">
-          <svg className="app-logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 2L35 12V28L20 38L5 28V12L20 2Z" stroke="currentColor" strokeWidth="2.5" fill="none"/>
-            <path d="M20 12L28 17V27L20 32L12 27V17L20 12Z" fill="currentColor"/>
+          <svg className="app-logo" viewBox="0 0 463 152" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="463" height="152" rx="20" fill="#00A8E8"/>
+            <circle cx="91" cy="76" r="60" fill="white"/>
+            <path d="M91 45 C85 45 80 50 80 56 L90 56 C90 54 90.5 53 91 53 C92 53 93 53.5 93 55 C93 57 91 58 87 60 C82 62 78 65 78 72 L78 75 L104 75 L104 68 L88 68 C88.5 66.5 89.5 66 91 65 C96 63 103 61 103 54 C103 48.5 98 45 91 45 Z M78 82 L78 97 L90 97 L90 89 L104 89 L104 82 Z" fill="#00A8E8"/>
+            <line x1="176" y1="20" x2="176" y2="132" stroke="white" strokeWidth="4"/>
+            <text x="204" y="62" fill="white" fontSize="42" fontWeight="bold" fontFamily="Arial, sans-serif">HORAS</text>
+            <text x="204" y="118" fill="white" fontSize="42" fontWeight="bold" fontFamily="Arial, sans-serif">EXTRAS</text>
           </svg>
           <h1 className="app-title">Hextras</h1>
         </div>

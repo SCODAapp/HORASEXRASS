@@ -60,8 +60,7 @@ body {
 
 .app-logo {
   height: 40px;
-  width: 40px;
-  color: var(--primary-color);
+  width: auto;
 }
 
 .app-title {
