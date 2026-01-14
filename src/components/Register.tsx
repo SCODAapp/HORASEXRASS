@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface RegisterProps {
   onToggleView: () => void;
@@ -9,9 +10,18 @@ export default function Register({ onToggleView }: RegisterProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    if (refCode) {
+      setReferralCode(refCode.toUpperCase());
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +35,18 @@ export default function Register({ onToggleView }: RegisterProps) {
     }
 
     try {
-      await signUp(email, password, fullName);
+      const { user } = await signUp(email, password, fullName);
+
+      if (user && referralCode.trim()) {
+        const { error: refError } = await supabase.rpc('apply_referral_code', {
+          p_user_id: user.id,
+          p_referral_code: referralCode.trim().toUpperCase()
+        });
+
+        if (refError) {
+          console.warn('Error al aplicar código de referido:', refError);
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Error al crear la cuenta');
       console.error(err);
@@ -101,6 +122,24 @@ export default function Register({ onToggleView }: RegisterProps) {
               minLength={6}
             />
             <p className="form-hint">Mínimo 6 caracteres</p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="referralCode" className="form-label">
+              Código de Referido (Opcional)
+            </label>
+            <input
+              id="referralCode"
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              className="form-input"
+              placeholder="JUAN2024"
+              maxLength={20}
+            />
+            {referralCode && (
+              <p className="form-hint referral-hint">🎁 Obtendrás 50% de descuento</p>
+            )}
           </div>
 
           <button

@@ -17,8 +17,37 @@ export type Profile = {
   total_ratings: number;
   completed_tasks: number;
   published_tasks: number;
+  referral_code: string | null;
+  referred_by: string | null;
+  successful_referrals: number;
+  has_referral_discount: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type Subscription = {
+  id: string;
+  user_id: string;
+  status: 'free' | 'active' | 'past_due' | 'canceled' | 'trialing';
+  plan_name: string;
+  discount_percentage: number;
+  monthly_price: number;
+  discounted_price: number;
+  payment_provider: string | null;
+  subscription_id_external: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Referral = {
+  id: string;
+  referrer_id: string;
+  referred_id: string;
+  referral_code: string;
+  created_at: string;
+  is_active: boolean;
 };
 
 export type Task = {

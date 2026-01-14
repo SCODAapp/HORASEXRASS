@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import Referrals from './Referrals';
 
 interface ProfileProps {
   onClose: () => void;
@@ -6,6 +8,7 @@ interface ProfileProps {
 
 export default function Profile({ onClose }: ProfileProps) {
   const { profile, signOut } = useAuth();
+  const [showReferrals, setShowReferrals] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -74,10 +77,27 @@ export default function Profile({ onClose }: ProfileProps) {
             </div>
           )}
 
+          <div className="referral-preview">
+            <div className="referral-preview-content">
+              <span className="referral-icon">🎁</span>
+              <div className="referral-info">
+                <strong>Invita Amigos</strong>
+                <p>{profile.successful_referrals || 0} referidos · 50% OFF para ambos</p>
+              </div>
+            </div>
+            <button className="btn-referral" onClick={() => setShowReferrals(true)}>
+              Ver Código
+            </button>
+          </div>
+
           <button className="btn-signout" onClick={handleSignOut}>
             Cerrar Sesión
           </button>
         </div>
+
+        {showReferrals && (
+          <Referrals onClose={() => setShowReferrals(false)} />
+        )}
       </div>
     </div>
   );
