@@ -43,7 +43,7 @@ function AppContent() {
   return (
     <div className="app">
       <header className="app-header">
-        <svg className="app-logo" viewBox="0 0 463 152" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg className="app-logo" viewBox="0 0 463 152" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ pointerEvents: 'none' }}>
           <rect width="463" height="152" rx="20" fill="#00A8E8"/>
           <circle cx="91" cy="76" r="60" fill="white"/>
           <text x="91" y="106" fill="#00A8E8" fontSize="80" fontWeight="bold" fontFamily="Arial, sans-serif" textAnchor="middle">$</text>
