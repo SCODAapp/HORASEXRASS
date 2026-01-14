@@ -43,17 +43,14 @@ function AppContent() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="app-title-container">
-          <svg className="app-logo" viewBox="0 0 463 152" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="463" height="152" rx="20" fill="#00A8E8"/>
-            <circle cx="91" cy="76" r="60" fill="white"/>
-            <text x="91" y="106" fill="#00A8E8" fontSize="80" fontWeight="bold" fontFamily="Arial, sans-serif" textAnchor="middle">$</text>
-            <line x1="176" y1="20" x2="176" y2="132" stroke="white" strokeWidth="4"/>
-            <text x="204" y="62" fill="white" fontSize="42" fontWeight="bold" fontFamily="Arial, sans-serif">HORAS</text>
-            <text x="204" y="118" fill="white" fontSize="42" fontWeight="bold" fontFamily="Arial, sans-serif">EXTRAS</text>
-          </svg>
-          <h1 className="app-title">Hextras</h1>
-        </div>
+        <svg className="app-logo" viewBox="0 0 463 152" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="463" height="152" rx="20" fill="#00A8E8"/>
+          <circle cx="91" cy="76" r="60" fill="white"/>
+          <text x="91" y="106" fill="#00A8E8" fontSize="80" fontWeight="bold" fontFamily="Arial, sans-serif" textAnchor="middle">$</text>
+          <line x1="176" y1="20" x2="176" y2="132" stroke="white" strokeWidth="4"/>
+          <text x="204" y="62" fill="white" fontSize="42" fontWeight="bold" fontFamily="Arial, sans-serif">HORAS</text>
+          <text x="204" y="118" fill="white" fontSize="42" fontWeight="bold" fontFamily="Arial, sans-serif">EXTRAS</text>
+        </svg>
         <button
           className="profile-button"
           onClick={() => setShowProfile(true)}

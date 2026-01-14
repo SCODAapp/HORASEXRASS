@@ -37,7 +37,14 @@ export default function Register({ onToggleView }: RegisterProps) {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1 className="auth-title">Hextras</h1>
+        <svg className="auth-logo" viewBox="0 0 463 152" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '280px', height: 'auto', margin: '0 auto 1rem' }}>
+          <rect width="463" height="152" rx="20" fill="#00A8E8"/>
+          <circle cx="91" cy="76" r="60" fill="white"/>
+          <text x="91" y="106" fill="#00A8E8" fontSize="80" fontWeight="bold" fontFamily="Arial, sans-serif" textAnchor="middle">$</text>
+          <line x1="176" y1="20" x2="176" y2="132" stroke="white" strokeWidth="4"/>
+          <text x="204" y="62" fill="white" fontSize="42" fontWeight="bold" fontFamily="Arial, sans-serif">HORAS</text>
+          <text x="204" y="118" fill="white" fontSize="42" fontWeight="bold" fontFamily="Arial, sans-serif">EXTRAS</text>
+        </svg>
         <p className="auth-subtitle">Marketplace de tareas</p>
 
         <h2 className="auth-heading">Crear Cuenta</h2>
