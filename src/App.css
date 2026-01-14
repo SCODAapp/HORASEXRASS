@@ -715,6 +715,7 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: calc(var(--spacing) * 2);
   margin-bottom: calc(var(--spacing) * 3);
+  user-select: none;
 }
 
 .stat-card {
@@ -722,6 +723,8 @@ body {
   padding: calc(var(--spacing) * 2);
   border-radius: calc(var(--spacing) * 1);
   text-align: center;
+  user-select: none;
+  cursor: default;
 }
 
 .stat-value {
@@ -729,11 +732,13 @@ body {
   font-weight: 700;
   color: var(--primary-color);
   margin-bottom: calc(var(--spacing) * 0.5);
+  user-select: none;
 }
 
 .stat-label {
   font-size: 0.85rem;
   color: var(--text-secondary);
+  user-select: none;
 }
 
 .profile-edit-form {
@@ -1081,6 +1086,7 @@ input[type="time"] {
   display: flex;
   flex-direction: column;
   align-items: center;
+  user-select: none;
 }
 
 .profile-avatar {
@@ -1092,10 +1098,12 @@ input[type="time"] {
   align-items: center;
   justify-content: center;
   margin-bottom: calc(var(--spacing) * 2);
+  user-select: none;
 }
 
 .avatar-icon {
   font-size: 3rem;
+  user-select: none;
 }
 
 .profile-name {
@@ -1108,11 +1116,13 @@ input[type="time"] {
 .rating-stars {
   font-size: 1.3rem;
   margin-right: calc(var(--spacing) * 0.5);
+  user-select: none;
 }
 
 .no-rating {
   color: var(--text-secondary);
   font-size: 1.2rem;
+  user-select: none;
 }
 
 .btn-signout {
