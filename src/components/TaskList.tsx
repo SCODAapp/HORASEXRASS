@@ -59,13 +59,16 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, rating?: number) => {
     const badges = {
       available: { text: 'Disponible', class: 'badge-available' },
       assigned: { text: 'Asignada', class: 'badge-assigned' },
       in_progress: { text: 'En progreso', class: 'badge-in_progress' },
       completed: { text: 'Completada', class: 'badge-completed' },
-      rated: { text: 'Calificada', class: 'badge-rated' },
+      rated: {
+        text: rating ? `Calificada: ${rating} ${'⭐'.repeat(rating)}` : 'Calificada',
+        class: 'badge-rated',
+      },
     };
     return badges[status as keyof typeof badges] || badges.available;
   };
@@ -118,8 +121,10 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
             >
               <div className="task-card-header">
                 <h3>{task.title}</h3>
-                <span className={`badge ${getStatusBadge(task.status).class}`}>
-                  {getStatusBadge(task.status).text}
+                <span
+                  className={`badge ${getStatusBadge(task.status, task.rating)?.class}`}
+                >
+                  {getStatusBadge(task.status, task.rating)?.text}
                 </span>
               </div>
               <p className="task-description">{task.description}</p>
@@ -127,7 +132,11 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
                 <span className="location">📍 {task.location}</span>
                 {(task.scheduled_date || task.scheduled_time) && (
                   <span className="task-datetime">
-                    {task.scheduled_date && `📅 ${new Date(task.scheduled_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`}
+                    {task.scheduled_date &&
+                      `📅 ${new Date(task.scheduled_date).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}`}
                     {task.scheduled_time && ` 🕐 ${task.scheduled_time.slice(0, 5)}`}
                   </span>
                 )}
@@ -146,6 +155,10 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
     </div>
   );
 }
