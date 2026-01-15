@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase, Profile } from '../lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextProps {
   user: any | null;
@@ -24,16 +25,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ session }) => { // ← aquí cambiamos data por session
+    // ✅ getSession correcto
+    const getSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) console.error(error);
+
+      const session: Session | null = data?.session ?? null;
+      setUser(session?.user ?? null);
+      await loadProfile(session?.user?.id ?? null);
+      setLoading(false);
+    };
+    getSession();
+
+    const { subscription } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       loadProfile(session?.user?.id ?? null);
-      setLoading(false);
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      loadProfile(session?.user?.id ?? null);
-    });
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadProfile = async (userId: string | null) => {
