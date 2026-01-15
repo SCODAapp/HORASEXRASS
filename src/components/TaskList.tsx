@@ -113,52 +113,47 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
         </div>
       ) : (
         <div className="task-grid">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className="task-card"
-              onClick={() => onSelectTask(task)}
-            >
-              <div className="task-card-header">
-                <h3>{task.title}</h3>
-                <span
-                  className={`badge ${getStatusBadge(task.status, task.rating)?.class}`}
-                >
-                  {getStatusBadge(task.status, task.rating)?.text}
-                </span>
+          {tasks.map((task) => {
+            const badge = getStatusBadge(task.status, task.rating); // guardamos badge
+            return (
+              <div
+                key={task.id}
+                className="task-card"
+                onClick={() => onSelectTask(task)}
+              >
+                <div className="task-card-header">
+                  <h3>{task.title}</h3>
+                  <span className={`badge ${badge.class}`}>{badge.text}</span>
+                </div>
+                <p className="task-description">{task.description}</p>
+                <div className="task-meta">
+                  <span className="location">📍 {task.location}</span>
+                  {(task.scheduled_date || task.scheduled_time) && (
+                    <span className="task-datetime">
+                      {task.scheduled_date &&
+                        `📅 ${new Date(task.scheduled_date).toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}`}
+                      {task.scheduled_time && ` 🕐 ${task.scheduled_time.slice(0, 5)}`}
+                    </span>
+                  )}
+                  {task.creator && (
+                    <span className="employer">
+                      👤 {task.creator.full_name}
+                      {task.creator.total_ratings > 0 && (
+                        <span className="rating">
+                          ⭐ {task.creator.rating.toFixed(1)}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="task-description">{task.description}</p>
-              <div className="task-meta">
-                <span className="location">📍 {task.location}</span>
-                {(task.scheduled_date || task.scheduled_time) && (
-                  <span className="task-datetime">
-                    {task.scheduled_date &&
-                      `📅 ${new Date(task.scheduled_date).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'short',
-                      })}`}
-                    {task.scheduled_time && ` 🕐 ${task.scheduled_time.slice(0, 5)}`}
-                  </span>
-                )}
-                {task.creator && (
-                  <span className="employer">
-                    👤 {task.creator.full_name}
-                    {task.creator.total_ratings > 0 && (
-                      <span className="rating">
-                        ⭐ {task.creator.rating.toFixed(1)}
-                      </span>
-                    )}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
-    </div>
-  );
-}
-
     </div>
   );
 }
