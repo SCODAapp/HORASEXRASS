@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase, Profile, Subscription } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import type { Profile as DBProfile, Subscription as DBSubscription } from '../lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextProps {
   user: any | null;
-  profile: Profile | null;
-  subscription: Subscription | null;
+  profile: DBProfile | null;
+  subscription: DBSubscription | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; message: string }>;
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
@@ -22,8 +23,8 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [profile, setProfile] = useState<DBProfile | null>(null);
+  const [subscription, setSubscription] = useState<DBSubscription | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,16 +45,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     initAuth();
 
-    const { subscription: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Use an any cast to avoid typing collisions between our DB Subscription type and the runtime subscription object
+    const res: any = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user?.id) {
         loadProfile(session.user.id);
         loadUserSubscription(session.user.id);
+      } else {
+        setProfile(null);
+        setSubscription(null);
       }
     });
 
+    const authSub = res?.data?.subscription;
     return () => {
-      authSub.unsubscribe();
+      authSub?.unsubscribe?.();
     };
   }, []);
 
@@ -66,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .single();
 
     if (error) console.error('Error loading profile:', error);
-    else setProfile(profileData);
+    else setProfile(profileData as DBProfile);
   };
 
   // Cargar suscripción del usuario
@@ -77,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .eq('user_id', userId);
 
     if (error) console.error('Error loading subscription:', error);
-    else setSubscription(subs?.[0] ?? null); // Toma la primera suscripción si existe
+    else setSubscription((subs?.[0] ?? null) as DBSubscription);
   };
 
   // Registro de usuario
@@ -87,7 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
 
       if (fullName && _data?.user) {
-        await supabase.from('profiles').update({ full_name: fullName }).eq('id', _data.user.id);
+        await supabase.from('profiles').upsert({ id: _data.user.id, full_name: fullName });
       }
 
       return {
@@ -96,7 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       };
     } catch (error: any) {
       console.error('Signup error:', error);
-      return { success: false, message: error.message };
+      return { success: false, message: error?.message ?? String(error) };
     }
   };
 
@@ -105,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data: _data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        if (error.message.includes('Email not confirmed')) {
+        if (error?.message?.includes('Email not confirmed')) {
           return {
             success: false,
             message: 'Tu email no ha sido confirmado. Revisa tu correo antes de iniciar sesión.',
@@ -116,7 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { success: true, message: 'Login exitoso' };
     } catch (error: any) {
       console.error('Login error:', error);
-      return { success: false, message: error.message };
+      return { success: false, message: error?.message ?? String(error) };
     }
   };
 
