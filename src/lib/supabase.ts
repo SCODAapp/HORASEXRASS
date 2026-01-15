@@ -1,83 +1,169 @@
-import { createClient } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import type { Task, TaskRating } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+interface TaskWithRating extends Task {
+  rating?: number; // añadimos temporalmente la calificación
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+interface TaskListProps {
+  onSelectTask: (task: TaskWithRating) => void;
+  onCreateTask: () => void;
+}
 
-export type Profile = {
-  id: string;
-  full_name: string;
-  phone: string | null;
-  rating: number;
-  total_ratings: number;
-  completed_tasks: number;
-  published_tasks: number;
-  referral_code: string | null;
-  referred_by: string | null;
-  successful_referrals: number;
-  has_referral_discount: boolean;
-  created_at: string;
-  updated_at: string;
-};
+export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) {
+  const [tasks, setTasks] = useState<TaskWithRating[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'published' | 'assigned'>('all');
+  const { user } = useAuth();
 
-export type Subscription = {
-  id: string;
-  user_id: string;
-  status: 'free' | 'active' | 'past_due' | 'canceled' | 'trialing';
-  plan_name: string;
-  discount_percentage: number;
-  monthly_price: number;
-  discounted_price: number;
-  payment_provider: string | null;
-  subscription_id_external: string | null;
-  current_period_start: string | null;
-  current_period_end: string | null;
-  created_at: string;
-  updated_at: string;
-};
+  useEffect(() => {
+    loadTasks();
 
-export type Referral = {
-  id: string;
-  referrer_id: string;
-  referred_id: string;
-  referral_code: string;
-  created_at: string;
-  is_active: boolean;
-};
+    const channel = supabase
+      .channel('tasks-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        loadTasks();
+      })
+      .subscribe();
 
-export type Task = {
-  id: string;
-  creator_id: string;
-  title: string;
-  description: string;
-  location: string;
-  address: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  scheduled_date: string | null;
-  scheduled_time: string | null;
-  status: 'available' | 'assigned' | 'in_progress' | 'completed' | 'rated';
-  assigned_to: string | null;
-  assigned_at: string | null;
-  completed_at: string | null;
-  is_rated: boolean;
-  created_at: string;
-  updated_at: string;
-  creator?: Profile;
-  assignee?: Profile;
-};
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [filter, user]);
 
-export type TaskRating = {
-  id: string;
-  task_id: string;
-  rated_user_id: string;
-  rating_user_id: string;
-  rating: number;
-  comment: string | null;
-  created_at: string;
-};
+  const loadTasks = async () => {
+    try {
+      let query = supabase
+        .from('tasks')
+        .select(`
+          *,
+          creator:profiles!tasks_creator_id_fkey(*),
+          assignee:profiles!tasks_assigned_to_fkey(*),
+          ratings:task_ratings(rating, comment, created_at)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (filter === 'published') {
+        query = query.eq('creator_id', user?.id);
+      } else if (filter === 'assigned') {
+        query = query.eq('assigned_to', user?.id);
+      } else {
+        query = query.eq('status', 'available');
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Calculamos rating para cada tarea (tomamos la última calificación si existe)
+      const tasksWithRating: TaskWithRating[] = (data || []).map(task => {
+        const ratingValue = task.ratings?.[0]?.rating ?? 0; // si no hay rating, 0
+        return { ...task, rating: ratingValue };
+      });
+
+      setTasks(tasksWithRating);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status: string, rating?: number) => {
+    const badges = {
+      available: { text: 'Disponible', class: 'badge-available' },
+      assigned: { text: 'Asignada', class: 'badge-assigned' },
+      in_progress: { text: 'En progreso', class: 'badge-in_progress' },
+      completed: { text: 'Completada', class: 'badge-completed' },
+      rated: {
+        text: rating && rating > 0 ? `Calificada: ${rating} ${'⭐'.repeat(rating)}` : 'Calificada',
+        class: 'badge-rated',
+      },
+    };
+    return badges[status as keyof typeof badges] || badges.available;
+  };
+
+  if (loading) {
+    return <div className="loading">Cargando tareas...</div>;
+  }
+
+  return (
+    <div className="task-list-container">
+      <div className="task-list-header">
+        <h2>Tareas</h2>
+        <button onClick={onCreateTask} className="btn-primary btn-create">
+          + Nueva Tarea
+        </button>
+      </div>
+
+      <div className="filter-tabs">
+        <button
+          className={filter === 'all' ? 'tab-active' : 'tab'}
+          onClick={() => setFilter('all')}
+        >
+          Disponibles
+        </button>
+        <button
+          className={filter === 'published' ? 'tab-active' : 'tab'}
+          onClick={() => setFilter('published')}
+        >
+          Mis Publicadas
+        </button>
+        <button
+          className={filter === 'assigned' ? 'tab-active' : 'tab'}
+          onClick={() => setFilter('assigned')}
+        >
+          Mis Asignadas
+        </button>
+      </div>
+
+      {tasks.length === 0 ? (
+        <div className="empty-state">
+          <p>No hay tareas disponibles</p>
+        </div>
+      ) : (
+        <div className="task-grid">
+          {tasks.map(task => {
+            const badge = getStatusBadge(task.status, task.rating);
+            return (
+              <div
+                key={task.id}
+                className="task-card"
+                onClick={() => onSelectTask(task)}
+              >
+                <div className="task-card-header">
+                  <h3>{task.title}</h3>
+                  <span className={`badge ${badge.class}`}>{badge.text}</span>
+                </div>
+                <p className="task-description">{task.description}</p>
+                <div className="task-meta">
+                  <span className="location">📍 {task.location}</span>
+                  {(task.scheduled_date || task.scheduled_time) && (
+                    <span className="task-datetime">
+                      {task.scheduled_date &&
+                        `📅 ${new Date(task.scheduled_date).toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}`}
+                      {task.scheduled_time && ` 🕐 ${task.scheduled_time.slice(0, 5)}`}
+                    </span>
+                  )}
+                  {task.creator && (
+                    <span className="employer">
+                      👤 {task.creator.full_name}
+                      {task.creator.total_ratings > 0 && (
+                        <span className="rating">⭐ {task.creator.rating.toFixed(1)}</span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
