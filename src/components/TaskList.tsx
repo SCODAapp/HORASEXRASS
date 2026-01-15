@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Task } from '../lib/supabase';
+import type { Task, TaskRating } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
+interface TaskWithRating extends Task {
+  rating?: number; // añadimos temporalmente la calificación
+}
+
 interface TaskListProps {
-  onSelectTask: (task: Task) => void;
+  onSelectTask: (task: TaskWithRating) => void;
   onCreateTask: () => void;
 }
 
 export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<TaskWithRating[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'published' | 'assigned'>('all');
   const { user } = useAuth();
@@ -36,7 +40,8 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
         .select(`
           *,
           creator:profiles!tasks_creator_id_fkey(*),
-          assignee:profiles!tasks_assigned_to_fkey(*)
+          assignee:profiles!tasks_assigned_to_fkey(*),
+          ratings:task_ratings(rating, comment, created_at)
         `)
         .order('created_at', { ascending: false });
 
@@ -49,9 +54,15 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-      setTasks(data || []);
+
+      // Calculamos rating para cada tarea (tomamos la última calificación si existe)
+      const tasksWithRating: TaskWithRating[] = (data || []).map(task => {
+        const ratingValue = task.ratings?.[0]?.rating ?? 0; // si no hay rating, 0
+        return { ...task, rating: ratingValue };
+      });
+
+      setTasks(tasksWithRating);
     } catch (error) {
       console.error('Error loading tasks:', error);
     } finally {
@@ -66,7 +77,7 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
       in_progress: { text: 'En progreso', class: 'badge-in_progress' },
       completed: { text: 'Completada', class: 'badge-completed' },
       rated: {
-        text: rating ? `Calificada: ${rating} ${'⭐'.repeat(rating)}` : 'Calificada',
+        text: rating && rating > 0 ? `Calificada: ${rating} ${'⭐'.repeat(rating)}` : 'Calificada',
         class: 'badge-rated',
       },
     };
@@ -113,8 +124,8 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
         </div>
       ) : (
         <div className="task-grid">
-          {tasks.map((task) => {
-            const badge = getStatusBadge(task.status, task.rating); // guardamos badge
+          {tasks.map(task => {
+            const badge = getStatusBadge(task.status, task.rating);
             return (
               <div
                 key={task.id}
@@ -142,9 +153,7 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
                     <span className="employer">
                       👤 {task.creator.full_name}
                       {task.creator.total_ratings > 0 && (
-                        <span className="rating">
-                          ⭐ {task.creator.rating.toFixed(1)}
-                        </span>
+                        <span className="rating">⭐ {task.creator.rating.toFixed(1)}</span>
                       )}
                     </span>
                   )}
