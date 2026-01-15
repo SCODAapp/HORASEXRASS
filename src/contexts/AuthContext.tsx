@@ -28,10 +28,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) console.error('getSession error:', error);
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) console.error('getSession error:', sessionError);
 
-      const session: Session | null = data?.session ?? null;
+      const session: Session | null = sessionData?.session ?? null;
       setUser(session?.user ?? null);
 
       if (session?.user?.id) {
@@ -59,8 +59,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Cargar perfil
   const loadProfile = async (userId: string) => {
-    const { data: profileData, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    if (error) console.error('Error loading profile:', error);
+    const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (profileError) console.error('Error loading profile:', profileError);
     else setProfile(profileData);
   };
 
@@ -78,11 +78,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Registro de usuario
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data: _data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
 
-      if (fullName && data.user) {
-        await supabase.from('profiles').update({ full_name: fullName }).eq('id', data.user.id);
+      if (fullName && _data?.user) {
+        await supabase.from('profiles').update({ full_name: fullName }).eq('id', _data.user.id);
       }
 
       return {
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Login
   const login = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: _data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message.includes('Email not confirmed')) {
           return {
@@ -132,4 +132,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </AuthContext.Provider>
   );
-}
+};
