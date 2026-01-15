@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (session?.user?.id) {
         await loadProfile(session.user.id);
-        await loadSubscription(session.user.id);
+        await loadUserSubscription(session.user.id);
       }
 
       setLoading(false);
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       if (session?.user?.id) {
         loadProfile(session.user.id);
-        loadSubscription(session.user.id);
+        loadUserSubscription(session.user.id);
       }
     });
 
@@ -57,22 +57,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Cargar perfil
+  // Cargar perfil del usuario
   const loadProfile = async (userId: string) => {
-    const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    if (profileError) console.error('Error loading profile:', profileError);
+    const { data: profileData, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) console.error('Error loading profile:', error);
     else setProfile(profileData);
   };
 
-  // Cargar suscripción
-  const loadSubscription = async (userId: string) => {
+  // Cargar suscripción del usuario
+  const loadUserSubscription = async (userId: string) => {
     const { data: subs, error } = await supabase
       .from('subscriptions')
       .select('*')
       .eq('user_id', userId);
 
     if (error) console.error('Error loading subscription:', error);
-    else setSubscription(subs?.[0] ?? null); // toma la primera suscripción si existe
+    else setSubscription(subs?.[0] ?? null); // Toma la primera suscripción si existe
   };
 
   // Registro de usuario
