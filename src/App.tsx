@@ -7,12 +7,12 @@ import Modal from './components/Modal';
 import ToggleView from './components/ToggleView';
 
 export default function App() {
-  const [showLogin, setShowLogin] = useState(true);
+  const [showLogin] = useState(true); // ← eliminamos setShowLogin
   const [showModal, setShowModal] = useState(false);
-  const [isGridView, setIsGridView] = useState(true);
+  // const [isGridView, setIsGridView] = useState(true); ← eliminada porque no se usa
 
   const handleCloseModal = () => setShowModal(false);
-  const handleToggleView = () => setIsGridView((prev) => !prev);
+  const handleToggleView = () => {}; // temporal si no usas vista grid/list
 
   return (
     <AuthProvider>
