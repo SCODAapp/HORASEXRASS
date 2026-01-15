@@ -82,5 +82,6 @@ export type TaskRating = {
   rating: number; // 1 a 5
   comment: string | null;
   created_at: string;
-};
+}
+
 
