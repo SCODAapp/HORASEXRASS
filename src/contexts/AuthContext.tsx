@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase, Profile } from '../lib/supabase';
+import { supabase, Profile, Subscription } from '../lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextProps {
   user: any | null;
   profile: Profile | null;
+  subscription: Subscription | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; message: string }>;
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
@@ -22,38 +23,59 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // ✅ getSession correcto
-    const getSession = async () => {
+    const initAuth = async () => {
       const { data, error } = await supabase.auth.getSession();
-      if (error) console.error(error);
+      if (error) console.error('getSession error:', error);
 
       const session: Session | null = data?.session ?? null;
       setUser(session?.user ?? null);
-      await loadProfile(session?.user?.id ?? null);
+
+      if (session?.user?.id) {
+        await loadProfile(session.user.id);
+        await loadSubscription(session.user.id);
+      }
+
       setLoading(false);
     };
-    getSession();
 
-    const { subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+    initAuth();
+
+    const { subscription: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      loadProfile(session?.user?.id ?? null);
+      if (session?.user?.id) {
+        loadProfile(session.user.id);
+        loadSubscription(session.user.id);
+      }
     });
 
     return () => {
-      subscription.unsubscribe();
+      authSub.unsubscribe();
     };
   }, []);
 
-  const loadProfile = async (userId: string | null) => {
-    if (!userId) return setProfile(null);
+  // Cargar perfil
+  const loadProfile = async (userId: string) => {
     const { data: profileData, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (error) console.error('Error loading profile:', error);
     else setProfile(profileData);
   };
 
+  // Cargar suscripción
+  const loadSubscription = async (userId: string) => {
+    const { data: subs, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) console.error('Error loading subscription:', error);
+    else setSubscription(subs?.[0] ?? null); // toma la primera suscripción si existe
+  };
+
+  // Registro de usuario
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({ email, password });
@@ -73,6 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Login
   const login = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -92,18 +115,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Logout
   const logout = async () => {
     try {
       await supabase.auth.signOut();
       setUser(null);
       setProfile(null);
+      setSubscription(null);
     } catch (error: any) {
       console.error('Logout error:', error);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signUp, login, logout }}>
+    <AuthContext.Provider value={{ user, profile, subscription, loading, signUp, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
