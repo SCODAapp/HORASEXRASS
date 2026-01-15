@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Task, TaskRating } from '../lib/supabase';
+import type { Task } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 interface TaskWithRating extends Task {
-  rating?: number; // añadimos temporalmente la calificación
-  comment?: string | null;
+  rating?: number; // calificación de la tarea
+  comment?: string | null; // comentario de la calificación
 }
 
 interface TaskListProps {
