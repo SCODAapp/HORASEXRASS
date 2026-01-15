@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface TaskWithRating extends Task {
   rating?: number; // añadimos temporalmente la calificación
+  comment?: string | null;
 }
 
 interface TaskListProps {
@@ -56,10 +57,13 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
       const { data, error } = await query;
       if (error) throw error;
 
-      // Calculamos rating para cada tarea (tomamos la última calificación si existe)
       const tasksWithRating: TaskWithRating[] = (data || []).map(task => {
-        const ratingValue = task.ratings?.[0]?.rating ?? 0; // si no hay rating, 0
-        return { ...task, rating: ratingValue };
+        const ratingData = task.ratings?.[0];
+        return {
+          ...task,
+          rating: ratingData?.rating,
+          comment: ratingData?.comment ?? null,
+        };
       });
 
       setTasks(tasksWithRating);
@@ -84,9 +88,7 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
     return badges[status as keyof typeof badges] || badges.available;
   };
 
-  if (loading) {
-    return <div className="loading">Cargando tareas...</div>;
-  }
+  if (loading) return <div className="loading">Cargando tareas...</div>;
 
   return (
     <div className="task-list-container">
@@ -156,6 +158,11 @@ export default function TaskList({ onSelectTask, onCreateTask }: TaskListProps) 
                         <span className="rating">⭐ {task.creator.rating.toFixed(1)}</span>
                       )}
                     </span>
+                  )}
+                  {task.comment && (
+                    <div className="task-comment">
+                      💬 {task.comment}
+                    </div>
                   )}
                 </div>
               </div>
