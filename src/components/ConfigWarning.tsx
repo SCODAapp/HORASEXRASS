@@ -1,4 +1,11 @@
 export default function ConfigWarning() {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  if (supabaseUrl && supabaseKey) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-8">
@@ -14,7 +21,7 @@ export default function ConfigWarning() {
           </h1>
 
           <p className="text-lg text-gray-600 mb-8">
-            Esta aplicación requiere configuración de GitHub Actions secrets para funcionar correctamente.
+            Esta aplicación requiere configuración de las variables de entorno de Supabase.
           </p>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-left mb-6">
@@ -22,33 +29,29 @@ export default function ConfigWarning() {
             <ol className="space-y-3 text-blue-800">
               <li className="flex items-start">
                 <span className="font-bold mr-2">1.</span>
-                <span>Ve a <strong>Settings → Secrets and variables → Actions</strong></span>
+                <span>Crea un archivo <code>.env</code> en la raíz del proyecto</span>
               </li>
               <li className="flex items-start">
                 <span className="font-bold mr-2">2.</span>
-                <span>Agrega estos secrets:</span>
+                <span>Agrega estas variables:</span>
               </li>
               <ul className="ml-8 mt-2 space-y-2">
                 <li className="font-mono text-sm bg-white px-3 py-2 rounded border border-blue-300">
-                  VITE_SUPABASE_URL
+                  VITE_SUPABASE_URL=tu_url_aqui
                 </li>
                 <li className="font-mono text-sm bg-white px-3 py-2 rounded border border-blue-300">
-                  VITE_SUPABASE_ANON_KEY
+                  VITE_SUPABASE_ANON_KEY=tu_key_aqui
                 </li>
               </ul>
               <li className="flex items-start">
                 <span className="font-bold mr-2">3.</span>
-                <span>Ve a <strong>Settings → Pages</strong> y habilita GitHub Pages con source: <strong>GitHub Actions</strong></span>
-              </li>
-              <li className="flex items-start">
-                <span className="font-bold mr-2">4.</span>
-                <span>Ejecuta el workflow en la pestaña <strong>Actions</strong></span>
+                <span>Reinicia el servidor de desarrollo</span>
               </li>
             </ol>
           </div>
 
           <div className="text-sm text-gray-500">
-            Una vez configurado, la aplicación se desplegará automáticamente y estará lista para usar.
+            Una vez configurado, la aplicación cargará automáticamente.
           </div>
         </div>
       </div>
