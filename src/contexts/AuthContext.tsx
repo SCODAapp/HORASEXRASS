@@ -75,6 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return loadProfile(userId, retries - 1);
         }
 
+        console.error('Profile load failed after all retries. Signing out...');
+        await supabase.auth.signOut();
+        setUser(null);
         setProfile(null);
         setLoading(false);
       } else if (data) {
@@ -89,12 +92,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return loadProfile(userId, retries - 1);
         }
 
-        console.error('Profile not found after all retries. User may need to log out and log back in.');
+        console.error('Profile not found after all retries. Signing out...');
+        await supabase.auth.signOut();
+        setUser(null);
         setProfile(null);
         setLoading(false);
       }
     } catch (error) {
       console.error('Exception loading profile:', error);
+      await supabase.auth.signOut();
+      setUser(null);
       setProfile(null);
       setLoading(false);
     }
