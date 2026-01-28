@@ -12,39 +12,62 @@ export default function Referrals({ onClose }: ReferralsProps) {
   const [copied, setCopied] = useState(false);
   const [myReferrals, setMyReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentProfile, setCurrentProfile] = useState(profile);
 
   useEffect(() => {
-    loadReferrals();
+    loadData();
   }, []);
 
-  const loadReferrals = async () => {
+  const loadData = async () => {
     try {
+      if (!profile?.id) {
+        console.error('No profile ID available');
+        setLoading(false);
+        return;
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profile.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+      } else if (profileData) {
+        console.log('Profile loaded with referral_code:', profileData.referral_code);
+        setCurrentProfile(profileData);
+      }
+
       const { data, error } = await supabase
         .from('referrals')
         .select('*')
-        .eq('referrer_id', profile?.id)
+        .eq('referrer_id', profile.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setMyReferrals(data || []);
+      if (error) {
+        console.error('Error loading referrals:', error);
+      } else {
+        setMyReferrals(data || []);
+      }
     } catch (error) {
-      console.error('Error loading referrals:', error);
+      console.error('Error in loadData:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const copyReferralCode = () => {
-    if (profile?.referral_code) {
-      navigator.clipboard.writeText(profile.referral_code);
+    if (currentProfile?.referral_code) {
+      navigator.clipboard.writeText(currentProfile.referral_code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const shareReferralCode = () => {
-    const text = `¡Únete a Horas Extras con mi código ${profile?.referral_code} y obtén 50% de descuento en tu suscripción! 🎉`;
-    const url = `${window.location.origin}/?ref=${profile?.referral_code}`;
+    const text = `¡Únete a Horas Extras con mi código ${currentProfile?.referral_code} y obtén 50% de descuento en tu suscripción! 🎉`;
+    const url = `${window.location.origin}/?ref=${currentProfile?.referral_code}`;
 
     if (navigator.share) {
       navigator.share({
@@ -59,7 +82,7 @@ export default function Referrals({ onClose }: ReferralsProps) {
     }
   };
 
-  if (!profile) return null;
+  if (!currentProfile) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -79,11 +102,11 @@ export default function Referrals({ onClose }: ReferralsProps) {
         <div className="referral-code-section">
           <label>Tu Código de Referido</label>
           <div className="referral-code-box">
-            <span className="referral-code">{profile.referral_code || 'Cargando...'}</span>
+            <span className="referral-code">{currentProfile.referral_code || 'Cargando...'}</span>
             <button
               className="btn-copy"
               onClick={copyReferralCode}
-              disabled={!profile.referral_code}
+              disabled={!currentProfile.referral_code}
             >
               {copied ? '✓ Copiado' : 'Copiar'}
             </button>
@@ -92,7 +115,7 @@ export default function Referrals({ onClose }: ReferralsProps) {
           <button
             className="btn-share"
             onClick={shareReferralCode}
-            disabled={!profile.referral_code}
+            disabled={!currentProfile.referral_code}
           >
             📱 Compartir con Amigos
           </button>
@@ -100,11 +123,11 @@ export default function Referrals({ onClose }: ReferralsProps) {
 
         <div className="referral-stats">
           <div className="stat-item">
-            <span className="stat-number">{profile.successful_referrals || 0}</span>
+            <span className="stat-number">{currentProfile.successful_referrals || 0}</span>
             <span className="stat-label">Referidos Exitosos</span>
           </div>
 
-          {profile.has_referral_discount && (
+          {currentProfile.has_referral_discount && (
             <div className="stat-item highlight">
               <span className="stat-number">50%</span>
               <span className="stat-label">Descuento Activo</span>
