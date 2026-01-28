@@ -1,10 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 interface CreateTaskProps {
   onClose: () => void;
   onSuccess: () => void;
+}
+
+interface SearchResult {
+  place_id: string;
+  display_name: string;
+  lat: string;
+  lon: string;
 }
 
 export default function CreateTask({ onClose, onSuccess }: CreateTaskProps) {
@@ -19,7 +26,69 @@ export default function CreateTask({ onClose, onSuccess }: CreateTaskProps) {
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [error, setError] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const searchAddress = async (query: string) => {
+    if (query.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
+        {
+          headers: {
+            'Accept-Language': 'es',
+          }
+        }
+      );
+      const data = await response.json();
+      setSearchResults(data);
+      setShowResults(true);
+    } catch (error) {
+      console.error('Error searching address:', error);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleAddressChange = (value: string) => {
+    setAddress(value);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      searchAddress(value);
+    }, 500);
+  };
+
+  const selectAddress = (result: SearchResult) => {
+    setAddress(result.display_name);
+    setLatitude(parseFloat(result.lat));
+    setLongitude(parseFloat(result.lon));
+    setShowResults(false);
+    setSearchResults([]);
+  };
 
   const handleGetLocation = () => {
     if (!('geolocation' in navigator)) {
@@ -141,15 +210,32 @@ export default function CreateTask({ onClose, onSuccess }: CreateTaskProps) {
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="address">Dirección Completa</label>
+          <div className="form-group" ref={searchContainerRef}>
+            <label htmlFor="address">Buscar Dirección</label>
             <input
               id="address"
               type="text"
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Ej: Calle Masaryk 123, Polanco"
+              onChange={(e) => handleAddressChange(e.target.value)}
+              placeholder="Escribe para buscar una dirección..."
+              autoComplete="off"
             />
+            {searching && <small className="text-muted">Buscando...</small>}
+            {showResults && searchResults.length > 0 && (
+              <div className="search-results">
+                {searchResults.map((result) => (
+                  <div
+                    key={result.place_id}
+                    className="search-result-item"
+                    onClick={() => selectAddress(result)}
+                  >
+                    <span className="result-icon">📍</span>
+                    <span className="result-text">{result.display_name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <small>Escribe tu dirección y selecciona de las sugerencias</small>
           </div>
 
           <div className="form-group">

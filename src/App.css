@@ -214,6 +214,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: calc(var(--spacing) * 0.75);
+  position: relative;
 }
 
 .form-group label {
@@ -246,6 +247,57 @@ body {
 .form-group textarea {
   resize: vertical;
   min-height: 100px;
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--spacing) * 1);
+  box-shadow: 0 4px 6px var(--shadow);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+.search-result-item {
+  padding: calc(var(--spacing) * 1.5);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1.5);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background-color: var(--background);
+}
+
+.result-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.result-text {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.text-muted {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 4px;
+  display: block;
 }
 
 .btn-primary,
