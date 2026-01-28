@@ -38,15 +38,6 @@ function AppContent() {
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-spinner"></div>
-        <p>Cargando perfil...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="app">
       <ConfigWarning />
@@ -63,8 +54,8 @@ function AppContent() {
 
         <button className="profile-button" onClick={() => setShowProfile(true)}>
           <span className="profile-icon">👤</span>
-          <span className="profile-name">{profile.full_name}</span>
-          {profile.total_ratings > 0 && (
+          <span className="profile-name">{profile?.full_name || 'Usuario'}</span>
+          {profile && profile.total_ratings > 0 && (
             <span className="header-rating">⭐ {profile.rating.toFixed(1)}</span>
           )}
         </button>

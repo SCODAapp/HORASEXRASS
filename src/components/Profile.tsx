@@ -7,7 +7,7 @@ interface ProfileProps {
 }
 
 export default function Profile({ onClose }: ProfileProps) {
-  const { profile, logout } = useAuth();
+  const { profile, loading, logout } = useAuth();
   const [showReferrals, setShowReferrals] = useState(false);
 
   const handleSignOut = async () => {
@@ -19,8 +19,50 @@ export default function Profile({ onClose }: ProfileProps) {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content profile-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2 className="modal-title">Mi Perfil</h2>
+            <button className="modal-close" onClick={onClose}>
+              ×
+            </button>
+          </div>
+          <div className="profile-content">
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <p>Cargando perfil...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!profile) {
-    return null;
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content profile-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2 className="modal-title">Mi Perfil</h2>
+            <button className="modal-close" onClick={onClose}>
+              ×
+            </button>
+          </div>
+          <div className="profile-content">
+            <div style={{ textAlign: 'center', padding: '40px' }}>
+              <p style={{ marginBottom: '15px' }}>No se pudo cargar el perfil.</p>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+                Por favor, cierra sesión y vuelve a iniciar sesión.
+              </p>
+              <button className="btn-signout" onClick={handleSignOut} style={{ marginTop: '20px' }}>
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

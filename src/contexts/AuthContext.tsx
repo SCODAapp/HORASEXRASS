@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (retries > 0) {
           console.log('Retrying profile load...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 500));
           return loadProfile(userId, retries - 1);
         }
 
@@ -82,13 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(data);
         setLoading(false);
       } else {
-        console.log('No profile found, will retry if attempts left');
+        console.log('No profile found');
 
         if (retries > 0) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 500));
           return loadProfile(userId, retries - 1);
         }
 
+        console.error('Profile not found after all retries. User may need to log out and log back in.');
         setProfile(null);
         setLoading(false);
       }
