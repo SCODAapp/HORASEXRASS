@@ -127,6 +127,33 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
     }
   };
 
+  const handleDeleteTask = async () => {
+    if (!isCreator) return;
+
+    const confirm = window.confirm('¿Estás seguro de que quieres eliminar esta tarea? Esta acción no se puede deshacer.');
+    if (!confirm) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', task.id)
+        .eq('creator_id', user?.id);
+
+      if (error) throw error;
+
+      alert('Tarea eliminada exitosamente');
+      onUpdate();
+      onClose();
+    } catch (error: any) {
+      alert('Error al eliminar tarea: ' + error.message);
+      console.error('Error details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (showRating) {
     return (
       <div className="modal-overlay" onClick={onClose}>
@@ -276,6 +303,16 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
               <div className="success-message">
                 <p>Esta tarea ha sido completada</p>
               </div>
+            )}
+
+            {isCreator && (
+              <button
+                onClick={handleDeleteTask}
+                className="btn-danger"
+                disabled={loading}
+              >
+                {loading ? 'Eliminando...' : 'Eliminar Tarea'}
+              </button>
             )}
           </div>
         </div>
