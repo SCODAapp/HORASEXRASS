@@ -16,10 +16,13 @@ export type Profile = {
   full_name: string;
   email: string;
   phone: string | null;
+  whatsapp: string | null;
   rating: number;
   total_ratings: number;
   completed_tasks: number;
   published_tasks: number;
+  negative_ratings_count: number;
+  is_blocked: boolean;
   referral_code: string | null;
   referred_by: string | null;
   successful_referrals: number;
@@ -82,6 +85,15 @@ export type TaskRating = {
   rating_user_id: string;
   rating: number; // 1 a 5
   comment: string | null;
+  created_at: string;
+}
+
+export type NegativeRating = {
+  id: string;
+  creator_id: string;
+  worker_id: string;
+  task_id: string;
+  reason: string | null;
   created_at: string;
 }
 

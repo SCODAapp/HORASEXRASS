@@ -1,14 +1,19 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Referrals from './Referrals';
+import { supabase } from '../lib/supabase';
 
 interface ProfileProps {
   onClose: () => void;
 }
 
 export default function Profile({ onClose }: ProfileProps) {
-  const { profile, loading, logout } = useAuth();
+  const { profile, loading, logout, refreshProfile } = useAuth();
   const [showReferrals, setShowReferrals] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [editedWhatsApp, setEditedWhatsApp] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -16,6 +21,42 @@ export default function Profile({ onClose }: ProfileProps) {
       onClose();
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
+    }
+  };
+
+  const handleEditClick = () => {
+    if (profile) {
+      setEditedName(profile.full_name);
+      setEditedWhatsApp(profile.whatsapp || '');
+      setIsEditing(true);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profile || !editedName.trim()) {
+      alert('El nombre es requerido');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editedName.trim(),
+          whatsapp: editedWhatsApp.trim() || null
+        })
+        .eq('id', profile.id);
+
+      if (error) throw error;
+
+      await refreshProfile();
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error al actualizar perfil:', error);
+      alert('Error al actualizar el perfil. Por favor intenta nuevamente.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -80,7 +121,103 @@ export default function Profile({ onClose }: ProfileProps) {
             <span className="avatar-icon">👤</span>
           </div>
 
-          <h3 className="profile-name">{profile.full_name}</h3>
+          {isEditing ? (
+            <div style={{ width: '100%', marginBottom: '20px' }}>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500' }}>
+                  Nombre Completo *
+                </label>
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  placeholder="Tu nombre completo"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500' }}>
+                  WhatsApp (con código de país)
+                </label>
+                <input
+                  type="tel"
+                  value={editedWhatsApp}
+                  onChange={(e) => setEditedWhatsApp(e.target.value)}
+                  placeholder="Ej: +54 9 11 1234-5678"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '16px'
+                  }}
+                />
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                  Recomendado para que puedan contactarte por WhatsApp
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '500',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    opacity: saving ? 0.6 : 1
+                  }}
+                >
+                  {saving ? 'Guardando...' : 'Guardar'}
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  disabled={saving}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '500',
+                    cursor: saving ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h3 className="profile-name">{profile.full_name}</h3>
+              <button
+                onClick={handleEditClick}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  marginBottom: '15px'
+                }}
+              >
+                ✏️ Editar Perfil
+              </button>
+            </>
+          )}
 
           <div className="profile-stats">
             <div className="stat-card">
@@ -116,6 +253,32 @@ export default function Profile({ onClose }: ProfileProps) {
             <div className="profile-info">
               <span className="info-label">Teléfono:</span>
               <span className="info-value">{profile.phone}</span>
+            </div>
+          )}
+
+          {profile.whatsapp && (
+            <div className="profile-info">
+              <span className="info-label">WhatsApp:</span>
+              <span className="info-value">{profile.whatsapp}</span>
+            </div>
+          )}
+
+          {profile.negative_ratings_count > 0 && (
+            <div style={{
+              padding: '12px',
+              backgroundColor: profile.is_blocked ? '#fef2f2' : '#fef9c3',
+              border: `1px solid ${profile.is_blocked ? '#fca5a5' : '#fde047'}`,
+              borderRadius: '8px',
+              marginBottom: '15px'
+            }}>
+              <div style={{ fontSize: '14px', color: profile.is_blocked ? '#dc2626' : '#ca8a04', fontWeight: '500' }}>
+                ⚠️ {profile.negative_ratings_count} calificación{profile.negative_ratings_count > 1 ? 'es' : ''} negativa{profile.negative_ratings_count > 1 ? 's' : ''}
+              </div>
+              {profile.is_blocked && (
+                <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '5px' }}>
+                  Tu cuenta está bloqueada para tomar tareas debido a múltiples reportes
+                </div>
+              )}
             </div>
           )}
 

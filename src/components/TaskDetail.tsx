@@ -14,6 +14,8 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [showNegativeRating, setShowNegativeRating] = useState(false);
+  const [negativeReason, setNegativeReason] = useState('');
   const { user, profile } = useAuth();
 
   const isCreator = user?.id === task.creator_id;
@@ -21,6 +23,11 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
 
   const handleTakeTask = async () => {
     if (!user || !profile) return;
+
+    if (profile.is_blocked) {
+      alert('Tu cuenta está bloqueada y no puedes tomar tareas debido a múltiples calificaciones negativas.');
+      return;
+    }
 
     const confirm = window.confirm('¿Estás seguro de que quieres tomar esta tarea?');
     if (!confirm) return;
@@ -154,6 +161,116 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
     }
   };
 
+  const handleSubmitNegativeRating = async () => {
+    if (!task.assigned_to) return;
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('negative_ratings')
+        .insert({
+          creator_id: user?.id,
+          worker_id: task.assigned_to,
+          task_id: task.id,
+          reason: negativeReason || null,
+        });
+
+      if (error) {
+        if (error.code === '23505') {
+          alert('Ya has calificado negativamente a este usuario por esta tarea.');
+        } else {
+          throw error;
+        }
+      } else {
+        alert('Calificación negativa registrada. El usuario ha sido notificado.');
+        onUpdate();
+        onClose();
+      }
+    } catch (error: any) {
+      alert('Error al enviar calificación negativa: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openWhatsApp = (phoneNumber: string) => {
+    const cleanNumber = phoneNumber.replace(/[^0-9+]/g, '');
+    window.open(`https://wa.me/${cleanNumber}`, '_blank');
+  };
+
+  if (showNegativeRating) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2>Reportar Usuario</h2>
+            <button className="modal-close" onClick={() => setShowNegativeRating(false)}>×</button>
+          </div>
+
+          <div className="task-detail">
+            <div style={{ padding: '20px', backgroundColor: '#fef2f2', borderRadius: '8px', marginBottom: '20px' }}>
+              <p style={{ color: '#dc2626', fontSize: '14px', fontWeight: '500', marginBottom: '10px' }}>
+                ⚠️ Advertencia
+              </p>
+              <p style={{ fontSize: '13px', color: '#7f1d1d' }}>
+                Esta acción registrará una calificación negativa para el usuario. Después de 3 calificaciones negativas,
+                su cuenta será bloqueada y no podrá tomar más tareas.
+              </p>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="negativeReason">Motivo del reporte</label>
+              <textarea
+                id="negativeReason"
+                value={negativeReason}
+                onChange={(e) => setNegativeReason(e.target.value)}
+                placeholder="Ej: El usuario aceptó la tarea pero no se presentó"
+                rows={4}
+                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '8px' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button
+                onClick={handleSubmitNegativeRating}
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '500',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.6 : 1
+                }}
+              >
+                {loading ? 'Enviando...' : 'Confirmar Reporte'}
+              </button>
+              <button
+                onClick={() => setShowNegativeRating(false)}
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '500',
+                  cursor: loading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (showRating) {
     return (
       <div className="modal-overlay" onClick={onClose}>
@@ -261,6 +378,27 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
                   <p className="rating">⭐ {task.creator.rating.toFixed(1)} ({task.creator.total_ratings} {task.creator.total_ratings === 1 ? 'calificación' : 'calificaciones'})</p>
                 )}
                 <p className="completed">✓ {task.creator.published_tasks} {task.creator.published_tasks === 1 ? 'tarea publicada' : 'tareas publicadas'}</p>
+                {isAssignee && task.creator?.whatsapp && (
+                  <button
+                    onClick={() => task.creator && openWhatsApp(task.creator.whatsapp!)}
+                    style={{
+                      marginTop: '10px',
+                      padding: '8px 16px',
+                      backgroundColor: '#25D366',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    💬 Contactar por WhatsApp
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -274,6 +412,27 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
                   <p className="rating">⭐ {task.assignee.rating.toFixed(1)} ({task.assignee.total_ratings} {task.assignee.total_ratings === 1 ? 'calificación' : 'calificaciones'})</p>
                 )}
                 <p className="completed">✓ {task.assignee.completed_tasks} {task.assignee.completed_tasks === 1 ? 'tarea completada' : 'tareas completadas'}</p>
+                {isCreator && task.assignee?.whatsapp && (
+                  <button
+                    onClick={() => task.assignee && openWhatsApp(task.assignee.whatsapp!)}
+                    style={{
+                      marginTop: '10px',
+                      padding: '8px 16px',
+                      backgroundColor: '#25D366',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    💬 Contactar por WhatsApp
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -290,13 +449,31 @@ export default function TaskDetail({ task, onClose, onUpdate }: TaskDetailProps)
             )}
 
             {isCreator && task.status === 'assigned' && (
-              <button
-                onClick={handleCompleteTask}
-                className="btn-success"
-                disabled={loading}
-              >
-                Marcar como Completada
-              </button>
+              <>
+                <button
+                  onClick={handleCompleteTask}
+                  className="btn-success"
+                  disabled={loading}
+                >
+                  Marcar como Completada
+                </button>
+                <button
+                  onClick={() => setShowNegativeRating(true)}
+                  disabled={loading}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    fontWeight: '500',
+                    fontSize: '16px'
+                  }}
+                >
+                  ⚠️ Reportar No Presentación
+                </button>
+              </>
             )}
 
             {(task.status === 'completed' || task.status === 'rated') && isCreator && (
